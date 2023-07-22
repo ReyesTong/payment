@@ -35,7 +35,7 @@ export class Scholarship extends SmartContract{
 
     @method()
     static parseGPA(msg: ByteString): bigint {
-        return 0;
+        return Utils.fromLEUnsigned(slice(msg,0n,16n));
     }
 
     @method()
@@ -46,6 +46,7 @@ export class Scholarship extends SmartContract{
             "Oracle sig verify failed!"
         );
         const studentGPA = Scholarship.parseGPA(msg);
+        
         if(studentGPA >= this.targetGPA){
             const winner = this.studentPubKey;
             assert(this.checkSig(winnerSig, winner),"ChcekSig Failed!");
