@@ -8,6 +8,8 @@ import {
     Sig,
     PubKey,
     slice,
+    hash256,
+    hash160
 } from 'scrypt-ts'
 import { RabinSig, RabinPubKey, RabinVerifierWOC } from 'scrypt-ts-lib'
 
@@ -35,7 +37,7 @@ export class Scholarship extends SmartContract{
 
     @method()
     static parseGPA(msg: ByteString): bigint {
-        return Utils.fromLEUnsigned(slice(msg,0n,16n));
+        return Utils.fromLEUnsigned(msg);
     }
 
     @method()
@@ -47,10 +49,13 @@ export class Scholarship extends SmartContract{
         );
         const studentGPA = Scholarship.parseGPA(msg);
         
-        if(studentGPA >= this.targetGPA){
-            const winner = this.studentPubKey;
-            assert(this.checkSig(winnerSig, winner),"ChcekSig Failed!");
-        }
+        assert(studentGPA >= this.targetGPA, "GPA is not good enough!")
+        assert(this.checkSig(studenSig, this.studentPubKey))
+
+        //I am not sure those code is necessary
+        const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(this.studentPubKey), studentGPA)
+        const expectedOutputs: ByteString = GPAOutput + this.buildChangeOutput();
+        assert(this.ctx.hashOutputs == hash256(expectedOutputs), 'hashOutputs dismatch');
     }
 
 
