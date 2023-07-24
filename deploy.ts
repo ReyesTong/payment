@@ -1,5 +1,5 @@
 import { Payment } from './src/contracts/payment'
-import { bsv, TestWallet, DefaultProvider, Ripemd160 } from 'scrypt-ts'
+import { bsv, TestWallet, DefaultProvider, Ripemd160, PubKey, toHex } from 'scrypt-ts'
 
 import * as dotenv from 'dotenv'
 
@@ -27,17 +27,17 @@ async function main() {
     const amount = 100
     const withdrawIntervals = 10000n
     const withdrawAmount = 300000n
-    const creatorPkh = "creator(student)'s public key hash here"
+    const creatorPkh = 'mnai8LzKea5e3C9qgrBo7JHgpiEnHKMhwR'
     const universityPKH = "University's public key hash here"
-    const lastWithdrawTimestamp = "Timestamp here"
+    const lastWithdrawTimestamp = 222n 
     
     
     const instance = new Payment(
         withdrawIntervals,
         withdrawAmount,
-        creatorPkh,
-        universityPKH,
-        lastWithdrawTimestamp
+        lastWithdrawTimestamp,
+        PubKey(toHex(creatorPkh)),
+        PubKey(toHex(universityPKH))
     )
 
     // Connect to a signer.
