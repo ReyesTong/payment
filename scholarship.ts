@@ -27,7 +27,7 @@ export class Scholarship extends SmartContract{
     @prop()
     universityPubKey: PubKey;
 
-    constructor(targetGPA: bigint, oraclePubKey: RabinPubKey, studentPubKey: PubKey, universityPubKey){
+    constructor(targetGPA: bigint, oraclePubKey: RabinPubKey, studentPubKey: PubKey, universityPubKey: PubKey){
         super(...arguments);
         this.targetGPA = targetGPA;
         this.oraclePubKey = oraclePubKey;
@@ -41,7 +41,7 @@ export class Scholarship extends SmartContract{
     }
 
     @method()
-    public unlock(msg: ByteString, sig: RabinPubKey, winnerSig: Sig, studenSig: Sig){
+    public unlock(msg: ByteString, sig: RabinSig, studenSig: Sig){
         assert(this.checkSig(studenSig, this.studentPubKey),"ChcekSig Failed!");
         assert(
             RabinVerifierWOC.verifySig(msg, sig, this.oraclePubKey),
