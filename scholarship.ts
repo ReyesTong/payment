@@ -1,3 +1,4 @@
+import { type } from 'os';
 import {
     SmartContract,
     prop,
@@ -9,9 +10,15 @@ import {
     PubKey,
     slice,
     hash256,
-    hash160
+    hash160,
+    toByteString
 } from 'scrypt-ts'
 import { RabinSig, RabinPubKey, RabinVerifierWOC } from 'scrypt-ts-lib'
+
+export type OracleData = {
+    GPA: bigint
+    PK : PubKey 
+}
 
 export class Scholarship extends SmartContract{
     //GPA target
@@ -35,36 +42,35 @@ export class Scholarship extends SmartContract{
         this.universityPubKey = universityPubKey;
     }
 
+
     @method()
-    static parseGPA(GPAmsg: ByteString): bigint {
-        return Utils.fromLEUnsigned(GPAmsg);
+    static parseData(GPAmsg: ByteString,PKmsg: ByteString): OracleData {
+        return {
+            GPA: Utils.fromLEUnsigned(GPAmsg),
+            PK : PubKey(PKmsg)
+        }
     }
 
     @method()
-    static parsePK(PKmsg: ByteString): PubKey {
-        return Utils.fromLEUnsigned(PKmsg);
-    }
-
-    @method()
-    public unlock(GPAmsg: ByteString, PKmsg: ByteString,sig: RabinSig){
+    public unlock(GPAmsg: ByteString, PKmsg: ByteString,GPAsig: RabinSig, PKsig: RabinSig){
         assert(
-            RabinVerifierWOC.verifySig(GPAmsg, sig, this.oraclePubKey),
+            RabinVerifierWOC.verifySig(GPAmsg, GPAsig, this.oraclePubKey),
             "Oracle sig verify failed!"
         );
         assert(
-            RabinVerifierWOC.verifySig(PKmsg, sig, this.oraclePubKey),
+            RabinVerifierWOC.verifySig(PKmsg, PKsig, this.oraclePubKey),
             "Oracle sig verify failed!"
         );
 
-        const studentGPA = Scholarship.parseGPA(GPAmsg);
-        const studentPK = Scholarship.parsePK(PKmsg);
+        const oracleData = Scholarship.parseData(GPAmsg,PKmsg);
 
-        assert(studentPK == this.studentPubKey, "Error: PubKey Mismatching!")
-        assert(studentGPA >= this.targetGPA, "GPA is not good enough!")
+
+        assert(oracleData.PK == this.studentPubKey, "Error: PubKey dismatch!")
+        assert(oracleData.GPA >= this.targetGPA, "GPA is not good enough!")
 
         //I am not sure those code is necessary
-        const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(this.studentPubKey), studentGPA)
-        const expectedOutputs: ByteString = GPAOutput + this.buildChangeOutput();
+        const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(this.studentPubKey), oracleData.GPA)
+        const expectedOutputs: ByteString = GPAOutput + this.buildChangeOutput() + this.buildChangeOutput();
         assert(this.ctx.hashOutputs == hash256(expectedOutputs), 'hashOutputs dismatch');
     }
 
