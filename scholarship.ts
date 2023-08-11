@@ -41,8 +41,7 @@ export class Scholarship extends SmartContract{
     }
 
     @method()
-    public unlock(msg: ByteString, sig: RabinSig, studenSig: Sig){
-        assert(this.checkSig(studenSig, this.studentPubKey),"ChcekSig Failed!");
+    public unlock(msg: ByteString, sig: RabinSig){
         assert(
             RabinVerifierWOC.verifySig(msg, sig, this.oraclePubKey),
             "Oracle sig verify failed!"
@@ -50,7 +49,6 @@ export class Scholarship extends SmartContract{
         const studentGPA = Scholarship.parseGPA(msg);
         
         assert(studentGPA >= this.targetGPA, "GPA is not good enough!")
-        assert(this.checkSig(studenSig, this.studentPubKey))
 
         //I am not sure those code is necessary
         const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(this.studentPubKey), studentGPA)
