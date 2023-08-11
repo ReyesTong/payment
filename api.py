@@ -5,6 +5,7 @@ from flask import Flask, request, jsonify
 import csv
 import random
 import math
+from flask_cors import CORS,cross_origin
 
 
 def hash_to_int(x: bytes) -> int:
@@ -60,7 +61,9 @@ right_privKey = 1675870484941349616080095187743192261994904021570345583606005913
 #print(right_privKey)
 pubKey = left_privKey * right_privKey
 #print(pubKey)
-msg = 'Hello World!'
+msg_A = 'Hello World!'
+msg_B = 'Good Morning BSV Guys!'
+msg = msg_A + msg_B
 #print(msg)
 d_msg = hashlib.sha256(msg.encode('utf-8')).digest()
 #print("d-msg finish!")
@@ -83,30 +86,52 @@ def read_csv(file_name):
             gpa = row['GPA']
             data[name] = gpa
     return data
+def read_csv_pk(file_name):
+    data = {}
+    with open(file_name, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            name = row['Name']
+            pk = row['PubKey']
+            data[name] = pk
+    return data
 
 # Flask app
 app = Flask(__name__)
+CORS(app)
+CORS(app,origins = '*')
 data = read_csv('student_data.csv')
+datapk = read_csv_pk('student_data.csv')
 
 @app.route('/api/gpa', methods=['GET'])
+@cross_origin()
 def get_gpa(): 
     id = request.args.get('name')
     processed_id = id.replace('_', ' ')
     if processed_id in data:
         gpa = data[processed_id]
+        pk = datapk[processed_id]
         d_gpa = hashlib.sha256(gpa.encode('utf-8')).digest()
-        hex_d_gpa = hexlify(d_gpa).decode('utf-8')
+        d_pk = hashlib.sha256(pk.encode('utf-8')).digest()
         S,U = sign(left_privKey, right_privKey, d_gpa)
-        info = {
+        PKS,PKU = sign(left_privKey, right_privKey, d_pk)
+        info = {s
             'GPA':gpa,
+            'PubKey':pk,
 
-            'Digest':d_gpa.hex(),
+            'DigestGPA':d_gpa.hex(),
+            'DigestPK':d_pk.hex(),
             
             'Signatures':{
                 'Rabin':{
                     'PubKey':pubKey,
                     'Sig_S':S,
                     'Sig_U':U.hex()
+                },
+                'RabinPK':{
+                    'PubKey':pubKey,
+                    'Sig_S':PKS,
+                    'Sig_U':PKU.hex()
                 }
             }
         }

@@ -36,18 +36,30 @@ export class Scholarship extends SmartContract{
     }
 
     @method()
-    static parseGPA(msg: ByteString): bigint {
-        return Utils.fromLEUnsigned(msg);
+    static parseGPA(GPAmsg: ByteString): bigint {
+        return Utils.fromLEUnsigned(GPAmsg);
     }
 
     @method()
-    public unlock(msg: ByteString, sig: RabinSig){
+    static parsePK(PKmsg: ByteString): PubKey {
+        return Utils.fromLEUnsigned(PKmsg);
+    }
+
+    @method()
+    public unlock(GPAmsg: ByteString, PKmsg: ByteString,sig: RabinSig){
         assert(
-            RabinVerifierWOC.verifySig(msg, sig, this.oraclePubKey),
+            RabinVerifierWOC.verifySig(GPAmsg, sig, this.oraclePubKey),
             "Oracle sig verify failed!"
         );
-        const studentGPA = Scholarship.parseGPA(msg);
-        
+        assert(
+            RabinVerifierWOC.verifySig(PKmsg, sig, this.oraclePubKey),
+            "Oracle sig verify failed!"
+        );
+
+        const studentGPA = Scholarship.parseGPA(GPAmsg);
+        const studentPK = Scholarship.parsePK(PKmsg);
+
+        assert(studentPK == this.studentPubKey, "Error: PubKey Mismatching!")
         assert(studentGPA >= this.targetGPA, "GPA is not good enough!")
 
         //I am not sure those code is necessary
@@ -55,6 +67,24 @@ export class Scholarship extends SmartContract{
         const expectedOutputs: ByteString = GPAOutput + this.buildChangeOutput();
         assert(this.ctx.hashOutputs == hash256(expectedOutputs), 'hashOutputs dismatch');
     }
+
+    @method()
+    public deposit(depositAmount: bigint, sig: Sig) {
+    // only the student can deposit
+       assert(this.checkSig(sig, this.universityPubKey), 'checkSig failed');
+    // avoid stealing money from the contract
+       assert(depositAmount > 0, 'deposit amount should be positive');
+
+       const contractOutput: ByteString = this.buildStateOutput(this.ctx.utxo.value + depositAmount)
+       const expectedOutputs: ByteString = contractOutput + this.buildChangeOutput()
+       assert(this.ctx.hashOutputs == hash256(expectedOutputs), 'hashOutputs dismatch');
+   }
+
+    @method()
+    public destroy(sig: Sig) {
+    // only the student can destroy
+       assert(this.checkSig(sig, this.universityPubKey), 'checkSig failed');
+   }
 
 
 }
