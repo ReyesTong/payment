@@ -8,10 +8,8 @@ import {
     Utils,
     Sig,
     PubKey,
-    slice,
     hash256,
     hash160,
-    toByteString
 } from 'scrypt-ts'
 import { RabinSig, RabinPubKey, RabinVerifierWOC } from 'scrypt-ts-lib'
 
@@ -27,18 +25,17 @@ export class Scholarship extends SmartContract{
     // Oracles Rabin pubulic key
     @prop()
     oraclePubKey: RabinPubKey;
-    //Student's public key
     @prop()
-    studentPubKey: PubKey;
+    scolarshipAmout: bigint;
     //Univerity's public key
     @prop()
     universityPubKey: PubKey;
 
-    constructor(targetGPA: bigint, oraclePubKey: RabinPubKey, studentPubKey: PubKey, universityPubKey: PubKey){
+    constructor(targetGPA: bigint, oraclePubKey: RabinPubKey,scolarshipAmout: bigint, universityPubKey: PubKey){
         super(...arguments);
         this.targetGPA = targetGPA;
         this.oraclePubKey = oraclePubKey;
-        this.studentPubKey = studentPubKey;
+        this.scolarshipAmout = scolarshipAmout;
         this.universityPubKey = universityPubKey;
     }
 
@@ -65,12 +62,12 @@ export class Scholarship extends SmartContract{
         const oracleData = Scholarship.parseData(GPAmsg,PKmsg);
 
 
-        assert(oracleData.PK == this.studentPubKey, "Error: PubKey dismatch!")
         assert(oracleData.GPA >= this.targetGPA, "GPA is not good enough!")
 
         //I am not sure those code is necessary
-        const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(this.studentPubKey), oracleData.GPA)
-        const expectedOutputs: ByteString = GPAOutput + this.buildChangeOutput() + this.buildChangeOutput();
+        const contractOutput: ByteString = this.buildStateOutput(this.ctx.utxo.value - this.scolarshipAmout)
+        const GPAOutput: ByteString = Utils.buildPublicKeyHashOutput(hash160(oracleData.PK), oracleData.GPA)
+        const expectedOutputs: ByteString = contractOutput + GPAOutput + this.buildChangeOutput();
         assert(this.ctx.hashOutputs == hash256(expectedOutputs), 'hashOutputs dismatch');
     }
 
@@ -88,7 +85,7 @@ export class Scholarship extends SmartContract{
 
     @method()
     public destroy(sig: Sig) {
-    // only the student can destroy
+    // only the university can destroy
        assert(this.checkSig(sig, this.universityPubKey), 'checkSig failed');
    }
 
